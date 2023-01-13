@@ -2,9 +2,10 @@ const cheerio = require("cheerio")
 const axios = require("axios")
 const fs = require('node:fs/promises');
 const old_fs = require('fs')
-const stream = require("stream")
+const stream = require('stream');
 const promisify = require("util").promisify
 const FormData = require('form-data');
+const bluebird = require('bluebird')
 
 const host = "https://www.beijing120.com"
 const inst = axios.create({
@@ -30,7 +31,7 @@ async function downloadFile(fileUrl, outputLocationPath) {
         url: fileUrl,
         responseType: 'stream',
     }).then(response => {
-        const writer = fs.createWriteStream(outputLocationPath);
+        const writer = old_fs.createWriteStream(outputLocationPath);
         response.data.pipe(writer);
         return finished(writer); //this is a Promise
     });
@@ -67,19 +68,27 @@ async function getDayPage(date, title, page_id,content_id) {
                 let fh = await fs.open(blank_file, 'a');
                 await fh.close();
             }
+        } else {
+          console.log(err);
         }
     }
 }
 
 async function main(){
-    for (let i = 1; i < 96; i++) {
-        let list = await getListPage(i)
-        if (list && list.data.length > 0) {
-            for (const obj of list.data) {
-                await getDayPage(obj.date, obj.title, i, obj.id)
-            }
-        }
+  const page_list = []
+  for (let i = 1; i < 96; i++) {
+    page_list.push(i)
+  }
+  await bluebird.map(page_list, async (page) => {
+    let list = await getListPage(page)
+    if (list && list.data.length > 0) {
+      for (const obj of list.data) {
+        await getDayPage(obj.date, obj.title, page, obj.id)
+      }
     }
+  }, {concurrency: 8}).then(() => {
+    console.log("done")
+  })
 }
 
 main()
