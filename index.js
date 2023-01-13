@@ -76,7 +76,7 @@ async function getDayPage(date, title, page_id,content_id) {
 
 async function main(){
   const page_list = []
-  for (let i = 1; i < 96; i++) {
+  for (let i = 1; i <= 96; i++) {
     page_list.push(i)
   }
   await bluebird.map(page_list, async (page) => {
